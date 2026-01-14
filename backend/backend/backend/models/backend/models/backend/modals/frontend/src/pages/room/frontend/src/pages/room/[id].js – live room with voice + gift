@@ -1,0 +1,36 @@
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
+import io from 'socket.io-client';
+
+let socket;
+export default function Room() {
+    const router = useRouter();
+    const { id } = router.query;
+    const audioRef = useRef();
+
+    useEffect(() => {
+        if (!id) return;
+        socket = io('http://localhost:5000');
+        socket.emit('joinRoom', { roomId: id, userId: 'user-id' });
+
+        socket.on('voiceData', (chunk) => {
+            const audioBlob = new Blob([chunk], { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioRef.current.src = audioUrl;
+            audioRef.current.play();
+        });
+
+        socket.on('showGift', ({ gift, receiverId }) => {
+            console.log('Gift received', gift, receiverId);
+        });
+
+        return () => socket.disconnect();
+    }, [id]);
+
+    return (
+        <div>
+            <h2>Room: {id}</h2>
+            <audio ref={audioRef} autoPlay />
+        </div>
+    );
+}
